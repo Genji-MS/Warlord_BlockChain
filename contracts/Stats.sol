@@ -1,10 +1,12 @@
 pragma solidity ^0.6.0;
 
+import "./WarlordToken.sol";
+
 /// @title Warlord
 /// @author Genji
 /// @notice Source of blockchain data. includes stats of the current Warlord Candidate the # of Victores and current Players stats
 /// @dev Warlord Candidate stats are provided via Web3, looking at the most recent contracts data. Only Arena.sol inherits
-contract Stats {
+contract Stats is WarlordToken{
 
     address public warlordFighter;
     //bytes32 private warlordActions;  //if encrypted
@@ -65,12 +67,15 @@ contract Stats {
     }
 
     /// @notice setter for when Warlord Candidate was victorious via Arena.sol
-    /// @dev TODO: Implement creation of ERC721 token to the Warlord's address. Then call deadWarlord to empty the Warlord Candidate
+    /// @dev TODO: Implement array of Tokens to generate ID and URL data.
     function victoryWarlord() internal {
         warlordVictories = warlordVictories + 1;
-        //if (warlordVictories == 100){
+        if (warlordVictories == 100){
+            WarlordToken Warlord = new WarlordToken();
+            Warlord.mint(warlordFighter, 1/*array of IDs+1*/, "http://WebsiteForTokenData");
             //hall of fame!!
-        //}
+            deadWarlord();
+        }
     }
     
     /// @notice setter to empty the Warlord Candidate slot
@@ -93,7 +98,7 @@ contract Stats {
     // }
     
     /// @notice Checks if input falls within a valid range or cancels the transaction. Then converts a valid int into an array
-    /// @param uint32 _actions The same sequence passed into Arena.sol a non-space sequence of 10 int[1,2,3 ONLY]
+    /// @param _actions The same sequence passed into Arena.sol a non-space sequence of 10 int[1,2,3 ONLY]
     /// @return uint8[] memory The action sequence converted into an array for the game loop. stored as playerActions in Arena.sol
     /// @dev we only want to store an encrypted action sequence in our stats. When encryption exists via WEB3 we will change the param passed into CreatePlayerStats
     function InputActions (uint32 _actions) internal returns (uint8[] memory){
@@ -113,7 +118,7 @@ contract Stats {
     }
 
     /// @notice When a player begins the combat loop of Arena.sol set default stats. Will optionally fill the warlord Candidate slot if it is vacant
-    /// @param uint8[] memory actions_encoded a non-space sequence of 10 int[1,2,3 ONLY] represents 1=Fast Attack, 2=Power, 3=Tech
+    /// @param _actions is the array received from InputActions() the sequence of actions 10 int[1,2,3 ONLY] represents 1=Fast Attack, 2=Power, 3=Tech
     /// @dev we receive a memory array, not a storage one, even thou we write this data to storage
     /// @dev this is THE function will cause comparePlayers() to return true at the start of combat, and why we want to write their data to the chain
     /// @dev the warlordVictories is set to 0 here as the player has not participated in combat
