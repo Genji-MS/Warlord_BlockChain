@@ -4,14 +4,14 @@ pragma solidity ^0.6.0;
 /// @author Genji
 /// @notice Purpose is to avoid calling RNG off the chain. And prevent re-roll cheats. Its implementation in the Arena is to modify the damage one player does to another
 /// @dev All function calls work without error or warnings on Remis.etherium.org. Only Arena.sol inherits currently, but should also be implemented in Shrine.sol
-contract DefinePi {
+contract Pi {
     
     uint16 public PIndex = 0;
     
     /// @notice stores 1001 sequential digits of Pi in memory. Consecutive digits have been truncated to a single digit.
     /// @return uint8 a single digit 0-9 that corresponds to the array of Pi[PIndex] value
     /// @dev uint256 holds 78 digits, but to avoid the upper range we store only 77 per array sequence.
-    function Pi_RNG() internal returns(uint8) {
+    function RNG() internal returns(uint8) {
         uint Length = 77;
         uint256[] memory PI = new uint256[](13);
         PI[0] = 31415926535897932384626438327950284197169393751058209749459230781640628620898;

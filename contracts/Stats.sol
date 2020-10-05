@@ -4,8 +4,8 @@ import "./WarlordToken.sol";
 
 /// @title Warlord
 /// @author Genji
-/// @notice Source of blockchain data. includes stats of the current Warlord Candidate the # of Victores and current Players stats
-/// @dev Warlord Candidate stats are provided via Web3, looking at the most recent contracts data. Only Arena.sol inherits
+/// @notice Source of blockchain data
+/// @dev TODO: Warlord actions encrypted/decrypted via Web3. Only Arena.sol inherits
 contract Stats is WarlordToken{
 
     address public warlordFighter;
@@ -19,19 +19,13 @@ contract Stats is WarlordToken{
     uint8[] private playerActions;
     int16 private playerHealth;
     uint8 private playerPower;
+    uint256 tokenID;
 
     // no need to store player history on the blockchain, each new player is dead or the new warlord at the end of combat.
-    // struct PlayerData {
-    //     address player;
-    //     bytes32 commands;  //SHA3 aka keccak256 hash of 10 command sequence. (1000 possible options)
-    //     uint8 health;
-    //     uint8 power;
-    // }  
-    // PlayerData[] players;
-    
-    /// @notice Evaluate if the address of the current player matches with the Warlord Candidate [FORBIDDEN]
+
+    /// @notice Evaluate if the address of player matches warlord [FORBIDDEN]
     /// @return bool = True = address' match, which will prevent the game loop in Arena.sol
-    /// @dev It is possible there was no current warlord, so while we prevent the game loop, we still want to complete the transaction to the block chain
+    /// @dev If there was no current warlord we only prevent the game loop, not require it, we still want to complete the block transaction
     function comparePlayers() internal view returns(bool){
         if (warlordFighter == playerFighter){
             return true;
@@ -39,25 +33,25 @@ contract Stats is WarlordToken{
         return false;
     }
     
-    /// @notice getter for Warlord Candidates private data.
-    /// @return uint8[](10) memory = unencrpted sequence of the current Warlord Candidates actions
-    /// @return int16 = Warlord Candidates Health. Health is recovered each battle, however the maximum may have been modified via Shrine.sol
-    /// @return uint8 = Warlord Candidates Power, Power is a players base damage. This value begins at 10 but can be increated via Shrine.sol
-    /// @dev including a stored name would be a nice addition
+    /// @notice getter
+    /// @return uint8[](10) memory = sequence of Warlord actions
+    /// @return int16 = Warlord max HP
+    /// @return uint8 = Warlord Power
+    /// @dev HP&Power can be modified via Shrine.sol TODO: add name
     function getWarlord() internal view returns(uint8[] memory, int16, uint8){
         return (warlordActions, warlordHealth, warlordPower);
     }
     
-    /// @notice getter for Players stored private data.
-    /// @return int16 = Players Health. Health is recovered each battle, however the maximum may have been modified via Shrine.sol
-    /// @return uint8 = Players Power, Power is a players base damage. This value begins at 10 but can be increated via Shrine.sol
-    /// @dev including a stored name would be a nice addition
+    /// @notice getter
+    /// @return int16 = Player max HP
+    /// @return uint8 = Player Power
+    /// @dev HP&Power can be modified via Shrine.sol TODO: add name
     function getPlayer() internal view returns(int16, uint8){
         return (playerHealth, playerPower);
     }
     
-    /// @notice setter for when the player becomes the new Warlord Candidate
-    /// @dev Victory is 1 here as this function is only called when they have defeated the previous Warlord Candidate via Arena.sol
+    /// @notice setter for player win
+    /// @dev Victory is 1 due to battle
     function newWarlord() internal {
         warlordFighter = playerFighter;
         warlordActions = playerActions;
@@ -66,41 +60,72 @@ contract Stats is WarlordToken{
         warlordVictories = 1;
     }
 
-    /// @notice setter for when Warlord Candidate was victorious via Arena.sol
-    /// @dev TODO: Implement array of Tokens to generate ID and URL data.
+    /// @notice setter for warlord win
+    /// @dev TODO: Web3 event collection and URI of tokens
     function victoryWarlord() internal {
         warlordVictories = warlordVictories + 1;
+        
+        //has candidate reached 100 victories?
         if (warlordVictories == 100){
+            //create new erc721
             WarlordToken Warlord = new WarlordToken();
-            Warlord.mint(warlordFighter, 1/*array of IDs+1*/, "http://WebsiteForTokenData");
-            //hall of fame!!
+            tokenID = tokenID + 1;
+            //URI encoding. I hate solidity!! 
+            string memory URI = appendUintToString("http://WebsiteForTokenData.data/?id=", tokenID);
+            //Mint new token
+            Warlord.mint(warlordFighter, tokenID, URI);
             deadWarlord();
         }
     }
     
-    /// @notice setter to empty the Warlord Candidate slot
-    /// @dev Called when the Warlord and Player have both died due to 0 HP via Arena.sol or when the Warlord has ascended due to 100 victories
+    //source https://ethereum.stackexchange.com/questions/10811/solidity-concatenate-uint-into-a-string
+    //modifications https://ethereum.stackexchange.com/questions/66438/issue-in-type-conversion-explicit-type-conversion-not-allowed-from-unit256-to
+    function uintToString(uint v) private pure returns (string memory) {
+        uint maxlength = 100;
+        bytes memory reversed = new bytes(maxlength);
+        uint i = 0;
+        while (v != 0) {
+            uint remainder = v % 10;
+            v = v / 10;
+            reversed[i++] = byte(uint8(48 + remainder % 10));
+        }
+        bytes memory s = new bytes(i);
+        for (uint j = 0; j < i; j++) {
+            s[j] = reversed[i - 1 - j];
+        }
+        return string(s);
+    }
+    function appendUintToString(string memory inStr, uint v) private pure returns (string memory) {
+        uint maxlength = 100;
+        bytes memory reversed = new bytes(maxlength);
+        uint i = 0;
+        while (v != 0) {
+            uint remainder = v % 10;
+            v = v / 10;
+            reversed[i++] = byte(uint8(48 + remainder % 10));
+        }
+        bytes memory inStrb = bytes(inStr);
+        bytes memory s = new bytes(inStrb.length + i);
+        uint j;
+        for (j = 0; j < inStrb.length; j++) {
+            s[j] = inStrb[j];
+        }
+        for (j = 0; j < i; j++) {
+            s[j + inStrb.length] = reversed[i - 1 - j];
+        }
+        return string(s);
+    }
+    
+    /// @notice setter for total loss
     function deadWarlord() internal {
         warlordFighter = address(0);
         warlordVictories = 0;
     }
     
-    // decoding a hash should be done outside of the block
-    // function decodeWarlordActions() internal returns(uint8[] memory){
-    //     uint8[] memory warlord_actions = new uint8[](10);
-    //     bytes32 actions_decoded = keccak256(abi.decodePacked(warlordActions));
-    //     for (uint8 i=0;i<10;i++){
-    //         uint8 action = uint8(_actions % 10);
-    //         _actions = _actions / 10;
-    //         require (action == 1 || action == 2 || action == 3); //invalid sequence of entries (1)Fast (2)Power (3)Tech
-    //         player_actions[i] = uint8(action);
-    //     }
-    // }
-    
-    /// @notice Checks if input falls within a valid range or cancels the transaction. Then converts a valid int into an array
-    /// @param _actions The same sequence passed into Arena.sol a non-space sequence of 10 int[1,2,3 ONLY]
-    /// @return uint8[] memory The action sequence converted into an array for the game loop. stored as playerActions in Arena.sol
-    /// @dev we only want to store an encrypted action sequence in our stats. When encryption exists via WEB3 we will change the param passed into CreatePlayerStats
+    /// @notice Checks if input falls within a valid range or cancels the transaction. Then converts valid ints into array
+    /// @param _actions sequence passed into Arena.sol
+    /// @return uint8[] Action sequence as array for game loop
+    /// @dev we only want to store an encrypted action sequence in our stats. When encryption exists TODO: change the param passed into CreatePlayerStats
     function InputActions (uint32 _actions) internal returns (uint8[] memory){
         require(_actions >= 1111111111 && _actions <= 3333333333); //must be exactly 10 actions
         uint8[] memory player_actions = new uint8[](10);
@@ -110,18 +135,14 @@ contract Stats is WarlordToken{
             require (action == 1 || action == 2 || action == 3); //invalid sequence of entries (1)Fast (2)Power (3)Tech
             player_actions[i] = uint8(action);
         }
-        //encoding on the block is pointless, keccak isn't encryption
-        //bytes32 actions_encoded = keccak256(abi.encodePacked(_actions));
-        
         CreatePlayerStats(/*actions_encoded*/ player_actions);
         return player_actions;
     }
 
-    /// @notice When a player begins the combat loop of Arena.sol set default stats. Will optionally fill the warlord Candidate slot if it is vacant
-    /// @param _actions is the array received from InputActions() the sequence of actions 10 int[1,2,3 ONLY] represents 1=Fast Attack, 2=Power, 3=Tech
-    /// @dev we receive a memory array, not a storage one, even thou we write this data to storage
-    /// @dev this is THE function will cause comparePlayers() to return true at the start of combat, and why we want to write their data to the chain
-    /// @dev the warlordVictories is set to 0 here as the player has not participated in combat
+    /// @notice Set default stats. Optionally fill warlord slot if vacant
+    /// @param _actions sequence received from InputActions()
+    /// @dev 'THE' function that will cause comparePlayers() to return true at the start of combat
+    /// @dev Victories = 0 as the player has not fought
     function CreatePlayerStats (/*bytes32*/ uint8[] memory _actions) internal {
         //if there is no warlord candidate, this player becomes it
         if (warlordFighter == address(0)){
