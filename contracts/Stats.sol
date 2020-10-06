@@ -27,10 +27,7 @@ contract Stats is WarlordToken{
     /// @return bool = True = address' match, which will prevent the game loop in Arena.sol
     /// @dev If there was no current warlord we only prevent the game loop, not require it, we still want to complete the block transaction
     function comparePlayers() internal view returns(bool){
-        if (warlordFighter == playerFighter){
-            return true;
-        }
-        return false;
+        require (warlordFighter != msg.sender, "You cannot duel yourself");
     }
     
     /// @notice getter
@@ -64,7 +61,6 @@ contract Stats is WarlordToken{
     /// @dev TODO: Web3 event collection and URI of tokens
     function victoryWarlord() internal {
         warlordVictories = warlordVictories + 1;
-        
         //has candidate reached 100 victories?
         if (warlordVictories == 100){
             //create new erc721
@@ -125,8 +121,9 @@ contract Stats is WarlordToken{
     /// @notice Checks if input falls within a valid range or cancels the transaction. Then converts valid ints into array
     /// @param _actions sequence passed into Arena.sol
     /// @return uint8[] Action sequence as array for game loop
+    /// @return bool If Warlord slot taken by player, disable the combat gameloop
     /// @dev we only want to store an encrypted action sequence in our stats. When encryption exists TODO: change the param passed into CreatePlayerStats
-    function InputActions (uint32 _actions) internal returns (uint8[] memory){
+    function InputActions (uint32 _actions) internal returns (uint8[] memory, bool){
         require(_actions >= 1111111111 && _actions <= 3333333333); //must be exactly 10 actions
         uint8[] memory player_actions = new uint8[](10);
         for (uint8 i=0;i<10;i++){
@@ -135,22 +132,25 @@ contract Stats is WarlordToken{
             require (action == 1 || action == 2 || action == 3); //invalid sequence of entries (1)Fast (2)Power (3)Tech
             player_actions[i] = uint8(action);
         }
-        CreatePlayerStats(/*actions_encoded*/ player_actions);
-        return player_actions;
+        bool activeGame = CreatePlayerStats(/*actions_encoded*/ player_actions);
+        return (player_actions, activeGame);
     }
 
     /// @notice Set default stats. Optionally fill warlord slot if vacant
     /// @param _actions sequence received from InputActions()
+    /// @return bool also InputActions(); If Warlord slot taken by player, disable the combat gameloop
     /// @dev 'THE' function that will cause comparePlayers() to return true at the start of combat
     /// @dev Victories = 0 as the player has not fought
-    function CreatePlayerStats (/*bytes32*/ uint8[] memory _actions) internal {
+    function CreatePlayerStats (/*bytes32*/ uint8[] memory _actions) internal returns (bool){
         //if there is no warlord candidate, this player becomes it
+        bool activeGame = true;
         if (warlordFighter == address(0)){
             warlordFighter = msg.sender;
             warlordActions = _actions;
             warlordHealth = 1000;
             warlordPower = 10;
             warlordVictories = 0;
+            activeGame = false;
         }
         else {
             playerFighter = msg.sender;

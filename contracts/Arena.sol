@@ -13,6 +13,7 @@ contract Arena is Pi,Stats {
     /// @dev TODO: encrypt actions off contract but store on chain. This function will only evaluate decrypted data
     /// @param _actions = a non-space sequence of 10 int[1,2,3 ONLY] represents 1=Fast Attack, 2=Power, 3=Tech
     function DeclareCombat(uint32 _actions) public {
+        Stats.comparePlayers();
         uint8[] memory playerActions;
         // int16 warlordHealth; //we need negatives
         // int16 playerHealth; //possible to go -0 health
@@ -21,12 +22,11 @@ contract Arena is Pi,Stats {
         uint8 rng;
         uint8 ROUNDS = 10;
         bool activeGame = true;
-        
-        playerActions = Stats.InputActions(_actions);
-        activeGame = !(comparePlayers()); //You cannot fight against yourself, or you just took the throne
+        (playerActions, activeGame) = Stats.InputActions(_actions);
         (uint8[] memory warlordActions, int16 warlordHealth, uint8 warlordPower) = Stats.getWarlord();
         (int16 playerHealth, uint8 playerPower) = Stats.getPlayer();
         
+        log0(bytes32(activeGame ? bytes32('t') : bytes32('f')));
         if (activeGame){
             
             for (uint i=0;i<ROUNDS;i++){
@@ -39,7 +39,7 @@ contract Arena is Pi,Stats {
                 uint8 p_power = playerPower;
                 
                 //call rng
-                rng = Pi.Pi_RNG();
+                rng = Pi.RNG();
                 
                 //modify power levels based on action and on rng
                 //(1)Fast is 1/2 strength. (2)Power is normal. (3)Tech is inverse
@@ -86,17 +86,20 @@ contract Arena is Pi,Stats {
                 }
                 //gameloop
             }
+            
+            //checking if game loop did not end prematurely
+            if (activeGame){
+                //determine winner
+                if (playerHealth > warlordHealth){
+                    log0("defeat");
+                    Stats.newWarlord();
+                }
+                else {
+                    log0("victory");
+                    Stats.victoryWarlord();
+                }
+            }
         }
         
-        //only checking if game loop did not end prematurely
-        if (activeGame){
-            //determine winner
-            if (playerHealth > warlordHealth){
-                Stats.newWarlord();
-            }
-            else {
-                Stats.victoryWarlord();
-            }
-        }
     }
 }
