@@ -1,5 +1,7 @@
 pragma solidity ^0.6.0;
 
+// SPDX-License-Identifier: UNLICENSED
+
 import "./Pi.sol";
 import "./Stats.sol";
 

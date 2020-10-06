@@ -1,12 +1,14 @@
 pragma solidity ^0.6.0;
 
-import "./WarlordToken.sol";
+// SPDX-License-Identifier: UNLICENSED
+
+//import "./WarlordToken.sol";
 
 /// @title Warlord
 /// @author Genji
 /// @notice Source of blockchain data
 /// @dev TODO: Warlord actions encrypted/decrypted via Web3. Only Arena.sol inherits
-contract Stats is WarlordToken{
+contract Stats /*is WarlordToken*/{
 
     address public warlordFighter;
     //bytes32 private warlordActions;  //if encrypted
@@ -24,9 +26,8 @@ contract Stats is WarlordToken{
     // no need to store player history on the blockchain, each new player is dead or the new warlord at the end of combat.
 
     /// @notice Evaluate if the address of player matches warlord [FORBIDDEN]
-    /// @return bool = True = address' match, which will prevent the game loop in Arena.sol
     /// @dev If there was no current warlord we only prevent the game loop, not require it, we still want to complete the block transaction
-    function comparePlayers() internal view returns(bool){
+    function comparePlayers() internal view{
         require (warlordFighter != msg.sender, "You cannot duel yourself");
     }
     
@@ -64,12 +65,12 @@ contract Stats is WarlordToken{
         //has candidate reached 100 victories?
         if (warlordVictories == 100){
             //create new erc721
-            WarlordToken Warlord = new WarlordToken();
+            //WarlordToken Warlord = new WarlordToken();
             tokenID = tokenID + 1;
             //URI encoding. I hate solidity!! 
             string memory URI = appendUintToString("http://WebsiteForTokenData.data/?id=", tokenID);
             //Mint new token
-            Warlord.mint(warlordFighter, tokenID, URI);
+            //Warlord.mint(warlordFighter, tokenID, URI);
             deadWarlord();
         }
     }

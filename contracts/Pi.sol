@@ -1,5 +1,7 @@
 pragma solidity ^0.6.0;
 
+// SPDX-License-Identifier: UNLICENSED
+
 /// @title Warlord
 /// @author Genji
 /// @notice Purpose is to avoid calling RNG off the chain. And prevent re-roll cheats. Its implementation in the Arena is to modify the damage one player does to another
