@@ -2,13 +2,13 @@ pragma solidity ^0.6.0;
 
 // SPDX-License-Identifier: UNLICENSED
 
-//import "./WarlordToken.sol";
+import "./WarlordToken.sol";
 
 /// @title Warlord
 /// @author Genji
 /// @notice Source of blockchain data
 /// @dev TODO: Warlord actions encrypted/decrypted via Web3. Only Arena.sol inherits
-contract Stats /*is WarlordToken*/{
+contract Stats is WarlordToken{
 
     address public warlordFighter;
     //bytes32 private warlordActions;  //if encrypted
@@ -65,12 +65,12 @@ contract Stats /*is WarlordToken*/{
         //has candidate reached 100 victories?
         if (warlordVictories == 100){
             //create new erc721
-            //WarlordToken Warlord = new WarlordToken();
+            WarlordToken Warlord = new WarlordToken();
             tokenID = tokenID + 1;
             //URI encoding. I hate solidity!! 
             string memory URI = appendUintToString("http://WebsiteForTokenData.data/?id=", tokenID);
             //Mint new token
-            //Warlord.mint(warlordFighter, tokenID, URI);
+            Warlord.mint(warlordFighter, tokenID, URI);
             deadWarlord();
         }
     }
@@ -125,7 +125,7 @@ contract Stats /*is WarlordToken*/{
     /// @return bool If Warlord slot taken by player, disable the combat gameloop
     /// @dev we only want to store an encrypted action sequence in our stats. When encryption exists TODO: change the param passed into CreatePlayerStats
     function InputActions (uint32 _actions) internal returns (uint8[] memory, bool){
-        require(_actions >= 1111111111 && _actions <= 3333333333); //must be exactly 10 actions
+        require(_actions >= 1111111111 && _actions <= 3333333333, "Exactly 10 actions (1-3)"; //must be exactly 10 actions
         uint8[] memory player_actions = new uint8[](10);
         for (uint8 i=0;i<10;i++){
             uint8 action = uint8(_actions % 10);
@@ -144,7 +144,7 @@ contract Stats /*is WarlordToken*/{
     /// @dev Victories = 0 as the player has not fought
     function CreatePlayerStats (/*bytes32*/ uint8[] memory _actions) internal returns (bool){
         //if there is no warlord candidate, this player becomes it
-        bool activeGame = true;
+        bool activeGame;
         if (warlordFighter == address(0)){
             warlordFighter = msg.sender;
             warlordActions = _actions;
@@ -158,7 +158,8 @@ contract Stats /*is WarlordToken*/{
             playerActions = _actions;
             playerHealth = 1000;
             playerPower = 10;
+            activeGame = true;
         }
-
+        return activeGame;
     }
 }
